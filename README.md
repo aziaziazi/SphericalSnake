@@ -1,5 +1,3 @@
 # Spherical Snake
 
-Snake game on a sphere. Play here: https://kevinalbs.com/spherical_snake
-
-![Spherical Snake Gameplay](./gameplay.gif)
+This is a Fork of https://github.com/kevinAlbs/SphericalSnake
