@@ -30,8 +30,17 @@ var direction = STARTING_DIRECTION;
 var focalLength = 200;
 
 var leftDown, rightDown;
+var directionAmount = 0;
 
 var score = 0;
+
+const gammaAngleMin = 0;
+const gammaAngleMax = 10;
+const directionMin = 0;
+const directionMax = 0.02;
+
+let activeLeft = false;
+let activeRight = false;
 
 const btnMoveLeft = document.querySelector("#move_left");
 function setLeft(val) {
@@ -55,23 +64,20 @@ function setRight(val) {
     }
 }
 
-let threshold = 8;        // angle seuil pour déclencher (en degrés)
-let activeLeft = false;
-let activeRight = false;
 
-// Safety : vérifier que les fonctions existent
-if (typeof setLeft !== "function" || typeof setRight !== "function") {
-    console.warn("setLeft / setRight ne sont pas définies ici.");
+function convertGamaToDirection(x) {
+  return (x - gammaAngleMin) * (directionMax - directionMin) / (gammaAngleMax - gammaAngleMin) + directionMin;
 }
 
 // Handler d'orientation
 function handleOrientation(e) {
     // gamma : inclinaison gauche/droite en degrés [-90 → 90]
     let gamma = e.gamma;
-    console.log('handleOrientation', gamma)
-
+    
+    directionAmount = convertGamaToDirection(gamma)
+    
     // gauche
-    if (gamma < -threshold) {
+    if (gamma < -gammaAngleMin) {
         console.info("gauche", !activeLeft)
         if (!activeLeft) {
             setLeft(true);
@@ -83,7 +89,7 @@ function handleOrientation(e) {
         }
     }
     // droite
-    else if (gamma > threshold) {
+    else if (gamma > gammaAngleMax) {
         console.info("droite", !activeRight)
         if (!activeRight) {
             setRight(true);
@@ -109,25 +115,30 @@ function handleOrientation(e) {
 }
 
 window.addEventListener('keydown', function(e) {
+    directionAmount = 0.08
     if (e.key == "ArrowLeft") setLeft(true);
     if (e.key == "ArrowRight") setRight(true);
 });
 
 window.addEventListener('keyup', function(e) {
+    directionAmount = 0
     if (e.key == "ArrowLeft") setLeft(false);
     if (e.key == "ArrowRight") setRight(false);
 });
 
 btnMoveLeft.addEventListener("pointerdown", function (e) {
     e.preventDefault();
+    directionAmount = 0.08
     setLeft(true);
 });
 btnMoveLeft.addEventListener("pointerleave", function (e) {
     e.preventDefault();
+    directionAmount = 0
     setLeft(false);
 });
 btnMoveLeft.addEventListener("pointerup", function (e) {
     e.preventDefault();
+    directionAmount = 0
     setLeft(false);
 });
 btnMoveLeft.addEventListener("contextmenu", function (e) {
@@ -136,14 +147,17 @@ btnMoveLeft.addEventListener("contextmenu", function (e) {
 
 btnMoveRight.addEventListener("pointerdown", function (e) {
     e.preventDefault();
+    directionAmount = 0.08
     setRight(true);
 });
 btnMoveRight.addEventListener("pointerleave", function (e) {
     e.preventDefault();
+    directionAmount = 0
     setRight(false);
 });
 btnMoveRight.addEventListener("pointerup", function (e) {
     e.preventDefault();
+    directionAmount = 0
     setRight(false);
 });
 btnMoveRight.addEventListener("contextmenu", function (e) {
@@ -152,7 +166,6 @@ btnMoveRight.addEventListener("contextmenu", function (e) {
 
 document.querySelector("#refresh").addEventListener("click", async (e) => {
     e.preventDefault();
-    await requestPermissionIfNeeded();
     window.location.reload(true);
 })
 
@@ -216,38 +229,62 @@ function allPoints() {
     return allPoints;
 }
 
-async function requestPermissionIfNeeded() {
-    if (
-        // iOS
-        typeof DeviceOrientationEvent !== "undefined" &&
-        typeof DeviceOrientationEvent.requestPermission === "function"
-    ) {
-        return DeviceOrientationEvent.requestPermission()
-            .then(response => {
-                if (response === "granted") {
-                    window.localStorage.setItem('DeviceOrientation', 'true')
-                    console.log("Gyroscope activé 👍");
-                } else {
-                    window.localStorage.setItem('DeviceOrientation', 'false')
-                    console.warn("Permission gyroscope refusée ❌");
+function requestDevicePermissions() {
+    console.log('requestDevicePermissions');
+    if (typeof DeviceOrientationEvent.requestPermission === 'function' && typeof DeviceMotionEvent.requestPermission === 'function') {
+       const requestOrientationPermission = () => {
+        console.log('requestOrientationPermission');
+           DeviceOrientationEvent.requestPermission().then(permissionState => {
+               if (permissionState === 'granted') {                
+                   window.addEventListener('deviceorientation', function(event) {
+                        handleOrientation(event);
+                    });
+               } else {
+                   const button = document.createElement('button');
+                   button.innerText = "Enable Orientation";
+                    button.style.position = 'absolute';
+                    button.style.top = '100%';
+                    button.style.left = '100%';
+                    button.style.transform = 'translate(50%, 50%)';
+                    document.body.appendChild(button);
+
+                    button.addEventListener('click', () => {
+                        requestOrientationPermission();
+                        document.body.removeChild(button); // Remove button after requesting permissions
+                    });
                 }
-            })
-            .catch(err => {
-                window.localStorage.setItem('DeviceOrientation', 'false')
-                console.error(err);
+            }).catch(err => {
+                console.error("Error requesting deviceorientation permission:", err);
             });
+        };
+        requestOrientationPermission();
+        const button = document.createElement('button');
+        button.innerText = "Enable Orientation";
+        button.style.fontSize = '1rem';
+        button.style.position = 'absolute';
+        button.style.top = 0;
+        button.style.left = 0;
+        button.style.zIndex = 100;
+        button.style.transform = 'translate(50%, 50%)';
+        document.body.appendChild(button);
+
+        button.addEventListener('click', () => {
+            console.log('click');        
+            requestOrientationPermission();
+            document.body.removeChild(button); // Remove button after requesting permissions
+        });
     } else {
-        // Android / autres
-        window.localStorage.setItem('DeviceOrientation', 'true')
-        console.log("Gyroscope activé 👍");
+        // Automatically start listeners on non-iOS 13+ devices
+        window.addEventListener('deviceorientation', function(event) {
+            handleOrientation(event);
+            console.log("DeviceOrientationEvent listener added automatically.");
+        });
     }
 }
-    
-function init() {    
-    const hasPermission = window.localStorage.getItem("DeviceOrientation")
-    
-    if (hasPermission) window.addEventListener("deviceorientation", handleOrientation);
 
+function init() {    
+    requestDevicePermissions()
+    
     cnv = document.getElementsByTagName('canvas')[0];
     ctx = cnv.getContext('2d');
     width = cnv.width;
@@ -290,9 +327,9 @@ function update() {
     while (accumulatedDelta >= targetDelta) {
         accumulatedDelta -= targetDelta;
         checkCollisions();
-        
-        if (leftDown) direction -= .08;
-        if (rightDown) direction += .08;
+
+        if (leftDown) direction += directionAmount;
+        if (rightDown) direction += directionAmount;
     
         applySnakeRotation();
         rotateZ(-direction);
