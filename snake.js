@@ -55,6 +55,59 @@ function setRight(val) {
     }
 }
 
+let threshold = 8;        // angle seuil pour déclencher (en degrés)
+let activeLeft = false;
+let activeRight = false;
+
+// Safety : vérifier que les fonctions existent
+if (typeof setLeft !== "function" || typeof setRight !== "function") {
+    console.warn("setLeft / setRight ne sont pas définies ici.");
+}
+
+// Handler d'orientation
+function handleOrientation(e) {
+    // gamma : inclinaison gauche/droite en degrés [-90 → 90]
+    let gamma = e.gamma;
+    console.log('handleOrientation', gamma)
+
+    // gauche
+    if (gamma < -threshold) {
+        console.info("gauche", !activeLeft)
+        if (!activeLeft) {
+            setLeft(true);
+            activeLeft = true;
+        }
+        if (activeRight) {
+            setRight(false);
+            activeRight = false;
+        }
+    }
+    // droite
+    else if (gamma > threshold) {
+        console.info("droite", !activeRight)
+        if (!activeRight) {
+            setRight(true);
+            activeRight = true;
+        }
+        if (activeLeft) {
+            setLeft(false);
+            activeLeft = false;
+        }
+    }
+    // centre → rien
+    else {
+        console.log('center')
+        if (activeLeft) {
+            setLeft(false);
+            activeLeft = false;
+        }
+        if (activeRight) {
+            setRight(false);
+            activeRight = false;
+        }
+    }
+}
+
 window.addEventListener('keydown', function(e) {
     if (e.key == "ArrowLeft") setLeft(true);
     if (e.key == "ArrowRight") setRight(true);
@@ -172,23 +225,29 @@ async function requestPermissionIfNeeded() {
         return DeviceOrientationEvent.requestPermission()
             .then(response => {
                 if (response === "granted") {
-                    window.addEventListener("deviceorientation", handleOrientation);
+                    window.localStorage.setItem('DeviceOrientation', 'true')
                     console.log("Gyroscope activé 👍");
                 } else {
+                    window.localStorage.setItem('DeviceOrientation', 'false')
                     console.warn("Permission gyroscope refusée ❌");
                 }
             })
             .catch(err => {
+                window.localStorage.setItem('DeviceOrientation', 'false')
                 console.error(err);
             });
     } else {
         // Android / autres
-        window.addEventListener("deviceorientation", handleOrientation);
+        window.localStorage.setItem('DeviceOrientation', 'true')
         console.log("Gyroscope activé 👍");
     }
 }
     
 function init() {    
+    const hasPermission = window.localStorage.getItem("DeviceOrientation")
+    
+    if (hasPermission) window.addEventListener("deviceorientation", handleOrientation);
+
     cnv = document.getElementsByTagName('canvas')[0];
     ctx = cnv.getContext('2d');
     width = cnv.width;
