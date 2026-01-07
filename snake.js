@@ -97,8 +97,9 @@ btnMoveRight.addEventListener("contextmenu", function (e) {
     e.preventDefault();
 });
 
-document.querySelector("#refresh").addEventListener("click", (e) => {
+document.querySelector("#refresh").addEventListener("click", async (e) => {
     e.preventDefault();
+    await requestPermissionIfNeeded();
     window.location.reload(true);
 })
 
@@ -162,7 +163,32 @@ function allPoints() {
     return allPoints;
 }
 
-function init() {
+async function requestPermissionIfNeeded() {
+    if (
+        // iOS
+        typeof DeviceOrientationEvent !== "undefined" &&
+        typeof DeviceOrientationEvent.requestPermission === "function"
+    ) {
+        return DeviceOrientationEvent.requestPermission()
+            .then(response => {
+                if (response === "granted") {
+                    window.addEventListener("deviceorientation", handleOrientation);
+                    console.log("Gyroscope activé 👍");
+                } else {
+                    console.warn("Permission gyroscope refusée ❌");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+            });
+    } else {
+        // Android / autres
+        window.addEventListener("deviceorientation", handleOrientation);
+        console.log("Gyroscope activé 👍");
+    }
+}
+    
+function init() {    
     cnv = document.getElementsByTagName('canvas')[0];
     ctx = cnv.getContext('2d');
     width = cnv.width;
