@@ -1,4 +1,4 @@
-// Angle representing the radius of one snake node.
+    // Angle representing the radius of one snake node.
 var NODE_ANGLE = Math.PI / 60;
 
 // This is the number of positions stored in the node queue.
@@ -29,7 +29,8 @@ var direction = STARTING_DIRECTION;
 
 var focalLength = 200;
 
-var leftDown, rightDown;
+var lastPointerX = 0;
+var lastPointerY = 0;
 var directionAmount = 0;
 
 var score = 0;
@@ -38,17 +39,17 @@ const gammaAngleMin = 0;
 const gammaAngleMax = 10;
 const directionMin = 0;
 const directionMax = 0.02;
+const defaultTurn = 0.08;
 
 let activeLeft = false;
 let activeRight = false;
+let angularVelocity = 0;
 
 const btnMoveLeft = document.querySelector("#move_left");
 function setLeft(val) {
     if (val) {
-        leftDown = true;
         btnMoveLeft.classList.add("down");
     } else {
-        leftDown = false;
         btnMoveLeft.classList.remove("down");   
     }
 }
@@ -56,17 +57,65 @@ function setLeft(val) {
 const btnMoveRight = document.querySelector("#move_right");
 function setRight(val) {
     if (val) {
-        rightDown = true;
         btnMoveRight.classList.add("down");
     } else {
-        rightDown = false;
         btnMoveRight.classList.remove("down");   
     }
 }
 
+const container = document.getElementById("container");
+function directionalValue(deltaTime) {
+    
+    const Px = lastPointerX
+    const Py = lastPointerY
+    const rect = container.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+
+    // vecteur direction actuelle
+    const ux = Math.cos(direction);
+    const uy = Math.sin(direction);
+
+    // vecteur vers la souris
+    const vx = Px - cx;
+    const vy = Py - cy;
+
+    const vLen = Math.hypot(vx, vy);
+    if (vLen === 0) return;
+
+    const vxn = vx / vLen;
+    const vyn = vy / vLen;
+
+    const dot = ux * vxn + uy * vyn;
+    const cross = ux * vyn - uy * vxn;
+
+    const angleDiff = Math.atan2(cross, dot);
+    console.log('angularVelocity => ', angularVelocity,angleDiff);
+
+    // DEAD ZONE
+    if (Math.abs(angleDiff) < 0.001) {
+        angularVelocity = 0;
+        direction += angleDiff; // snap exact
+        return;
+    }
+
+    // paramètres de contrôle
+    const Kp = 32;   // réactivité
+    const Kd = 6;    // amortissement
+
+    // accélération angulaire
+    const angularAccel = Kp * angleDiff - Kd * angularVelocity;
+
+    // intégration
+    angularVelocity += angularAccel * deltaTime;
+    direction += angularVelocity * deltaTime;
+
+}
+
+
 
 function convertGamaToDirection(x) {
-  return (x - gammaAngleMin) * (directionMax - directionMin) / (gammaAngleMax - gammaAngleMin) + directionMin;
+    return (x - gammaAngleMin) * (directionMax - directionMin) / (gammaAngleMax - gammaAngleMin) + directionMin;
 }
 
 // Handler d'orientation
@@ -76,6 +125,7 @@ function handleOrientation(e) {
     
     directionAmount = convertGamaToDirection(gamma)
     
+    console.log('dir, orient', directionAmount, gamma)
     // gauche
     if (gamma < -gammaAngleMin) {
         console.info("gauche", !activeLeft)
@@ -114,10 +164,20 @@ function handleOrientation(e) {
     }
 }
 
+container.addEventListener("pointermove", function (e) {
+    lastPointerX = e.offsetX
+    lastPointerY = e.offsetY
+});
+
 window.addEventListener('keydown', function(e) {
-    directionAmount = 0.08
-    if (e.key == "ArrowLeft") setLeft(true);
-    if (e.key == "ArrowRight") setRight(true);
+    if (e.key == "ArrowLeft") {
+        directionAmount = -0.08
+        setLeft(true)
+    };
+    if (e.key == "ArrowRight") {
+        directionAmount = 0.08
+        setRight(true)
+    };
 });
 
 window.addEventListener('keyup', function(e) {
@@ -128,7 +188,7 @@ window.addEventListener('keyup', function(e) {
 
 btnMoveLeft.addEventListener("pointerdown", function (e) {
     e.preventDefault();
-    directionAmount = 0.08
+    directionAmount = -0.08
     setLeft(true);
 });
 btnMoveLeft.addEventListener("pointerleave", function (e) {
@@ -166,6 +226,7 @@ btnMoveRight.addEventListener("contextmenu", function (e) {
 
 document.querySelector("#refresh").addEventListener("click", async (e) => {
     e.preventDefault();
+    // requestPermissionIfNeeded();
     window.location.reload(true);
 })
 
@@ -200,7 +261,7 @@ function addSnakeNode() {
         var last = snake[snake.length-1];
         var lastPos = last.posQueue[NODE_QUEUE_SIZE - 1];
 
-        // TODO: if nodes are added too quickly (possible if snake collides with two
+        // todo: if nodes are added too quickly (possible if snake collides with two
         // pellets quickly) then this doesn't look natural.
 
         // If the last node doesn't yet have a full history the default is
@@ -293,8 +354,6 @@ function init() {
     centerY = height / 2;
     points = [];
     clock = Date.now();
-    leftDown = false;
-    rightDown = false;
     regeneratePellet();
 
     // The +1 is necessary since the queue excludes the current position.
@@ -318,7 +377,7 @@ function update() {
     clock = curr;
 
     accumulatedDelta += delta;
-    var targetDelta = 15;
+    var targetDelta = 15; //ms
     if (accumulatedDelta > targetDelta * 4) {
         // Cap the accumulated delta. Avoid an unbounded number of updates. Slow down game.
         accumulatedDelta = targetDelta * 4;
@@ -326,11 +385,13 @@ function update() {
 
     while (accumulatedDelta >= targetDelta) {
         accumulatedDelta -= targetDelta;
+
         checkCollisions();
 
-        if (leftDown) direction += directionAmount;
-        if (rightDown) direction += directionAmount;
-    
+        const deltaTime = targetDelta / 1000;
+        directionalValue(deltaTime);
+
+       // deltaTime en secondes
         applySnakeRotation();
         rotateZ(-direction);
         rotateY(-snakeVelocity);
@@ -396,7 +457,7 @@ function render() {
     ctx.strokeStyle = "rgb(0,0,0)";
 
     // The radius value was determined experimentally.
-    // TODO: figure out the math behind this.
+    // todo: figure out the math behind this.
     ctx.arc(centerX, centerY, .58 * focalLength, 0, Math.PI * 2);
     ctx.stroke();
 }
