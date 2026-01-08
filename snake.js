@@ -45,6 +45,9 @@ let activeLeft = false;
 let activeRight = false;
 let angularVelocity = 0;
 
+// Mode de contrôle de la direction : 'pointer' ou 'gyroscope'
+let directionMode = 'pointer';
+
 const btnMoveLeft = document.querySelector("#move_left");
 function setLeft(val) {
     if (val) {
@@ -64,8 +67,7 @@ function setRight(val) {
 }
 
 const container = document.getElementById("container");
-function directionalValue(deltaTime) {
-    
+function directionalValue(deltaTime) {    
     const Px = lastPointerX
     const Py = lastPointerY
     const rect = container.getBoundingClientRect();
@@ -120,6 +122,9 @@ function convertGamaToDirection(x) {
 
 // Handler d'orientation
 function handleOrientation(e) {
+    // Ne mettre à jour que si le mode gyroscope est actif
+    if (directionMode !== 'gyroscope') return;
+    
     // gamma : inclinaison gauche/droite en degrés [-90 → 90]
     let gamma = e.gamma;
     
@@ -346,6 +351,17 @@ function requestDevicePermissions() {
 function init() {    
     requestDevicePermissions()
     
+    // Setup direction mode selector
+    const directionModeSelect = document.querySelector("#direction_mode");
+    if (directionModeSelect) {
+        directionModeSelect.addEventListener("change", (e) => {
+            directionMode = e.target.value;
+            console.log("Direction mode changed to:", directionMode);
+        });
+        // Initialiser avec la valeur du select
+        directionMode = directionModeSelect.value;
+    }
+    
     cnv = document.getElementsByTagName('canvas')[0];
     ctx = cnv.getContext('2d');
     width = cnv.width;
@@ -387,9 +403,19 @@ function update() {
         accumulatedDelta -= targetDelta;
 
         checkCollisions();
+        switch (directionMode) {
+            case 'gyroscope':
+            case 'buttons':
+                direction += directionAmount
+                break;
+            case 'pointer':
+                const deltaTime = targetDelta / 1000;
+                directionalValue(deltaTime);
+                break;
+            default:
+                break;
+        }
 
-        const deltaTime = targetDelta / 1000;
-        directionalValue(deltaTime);
 
        // deltaTime en secondes
         applySnakeRotation();
