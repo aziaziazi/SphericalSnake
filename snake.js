@@ -27,7 +27,7 @@ var collisionDistance = 2 * Math.sin(NODE_ANGLE);
 // The angle of the current snake direction in radians.
 var direction = STARTING_DIRECTION;
 
-var focalLength = 200;
+var focalLength = 300;
 
 var lastPointerX = 0;
 var lastPointerY = 0;
@@ -45,8 +45,7 @@ let activeLeft = false;
 let activeRight = false;
 let angularVelocity = 0;
 
-// Mode de contrôle de la direction : 'pointer' ou 'gyroscope'
-let directionMode = 'pointer';
+let directionMode;
 
 const btnMoveLeft = document.querySelector("#move_left");
 function setLeft(val) {
@@ -92,7 +91,6 @@ function directionalValue(deltaTime) {
     const cross = ux * vyn - uy * vxn;
 
     const angleDiff = Math.atan2(cross, dot);
-    console.log('angularVelocity => ', angularVelocity,angleDiff);
 
     // DEAD ZONE
     if (Math.abs(angleDiff) < 0.001) {
@@ -297,7 +295,7 @@ function allPoints() {
 
 function requestDevicePermissions() {
     console.log('requestDevicePermissions');
-    if (typeof DeviceOrientationEvent.requestPermission === 'function' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
        const requestOrientationPermission = () => {
         console.log('requestOrientationPermission');
            DeviceOrientationEvent.requestPermission().then(permissionState => {
@@ -307,7 +305,7 @@ function requestDevicePermissions() {
                     });
                } else {
                    const button = document.createElement('button');
-                   button.innerText = "Enable Orientation";
+                    button.innerText = "Enable Orientation";
                     button.style.position = 'absolute';
                     button.style.top = '100%';
                     button.style.left = '100%';
@@ -325,13 +323,6 @@ function requestDevicePermissions() {
         };
         requestOrientationPermission();
         const button = document.createElement('button');
-        button.innerText = "Enable Orientation";
-        button.style.fontSize = '1rem';
-        button.style.position = 'absolute';
-        button.style.top = 0;
-        button.style.left = 0;
-        button.style.zIndex = 100;
-        button.style.transform = 'translate(50%, 50%)';
         document.body.appendChild(button);
 
         button.addEventListener('click', () => {
@@ -348,15 +339,42 @@ function requestDevicePermissions() {
     }
 }
 
+function updateInterfaceWhenModeChange(mode) {
+    const controls = document.querySelector("#mobile_controls")
+    const orientation = document.querySelector("#enable-orientation")
+
+    switch (mode) {
+        case 'buttons':
+            controls.style['display'] = "flex"
+            orientation.style['display'] = "none"
+            break;
+        case 'gyroscope':
+            controls.style['display'] = "none"
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') orientation.style['display'] = "block"
+            break;
+        case 'pointer':
+            orientation.style['display'] = "none"
+            controls.style['display'] = "none"
+            break;
+        default:
+            break;
+    }
+}
+
 function init() {    
     requestDevicePermissions()
     
-    // Setup direction mode selector
     const directionModeSelect = document.querySelector("#direction_mode");
+    
+    directionMode = localStorage.getItem('directionMode') || 'buttons'
+    directionModeSelect.value = directionMode
+    updateInterfaceWhenModeChange(directionMode)
+    
     if (directionModeSelect) {
         directionModeSelect.addEventListener("change", (e) => {
             directionMode = e.target.value;
-            console.log("Direction mode changed to:", directionMode);
+            localStorage.setItem('directionMode', directionMode)
+            updateInterfaceWhenModeChange(directionMode)
         });
         // Initialiser avec la valeur du select
         directionMode = directionModeSelect.value;

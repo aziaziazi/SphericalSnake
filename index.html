@@ -19,10 +19,6 @@
 
     <link rel="icon" type="image/png" href="favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0" />
-
-    <!-- reCaptcha -->
-    <!-- <script src="https://www.google.com/recaptcha/enterprise.js?render=6Le6rvwqAAAAAIhHsQfZPb6pkU9nUnnkqD5mqADl"></script> -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6Le6rvwqAAAAAIhHsQfZPb6pkU9nUnnkqD5mqADl"></script>
     <style type='text/css'>
         * {
             margin: 0;
@@ -49,9 +45,9 @@
         }
         #leaderboard_area {
             font-size: 1.2em;
+            margin-top: 10px;
         }
     	canvas {
-    		border: 1px black solid;
     		display: block;
             background: #FFF;
     	}
@@ -60,60 +56,27 @@
             display: none;
             position: absolute;
             top: 200px;
-        }
-        /* hide reCaptcha badge */
-        .grecaptcha-badge {
-            display: none !important;
+            z-index: 10;
         }
 
         .hidden {
             display: none;
         }
 
-        #mobile_controls {
-            position: relative;
-            user-select: none;
-            -webkit-user-select: none; /* Safari, Chrome, iOS Safari */
-            -moz-user-select: none;    /* Firefox */
-            -ms-user-select: none;     /* Internet Explorer/Edge */
-            height: 10px;
-            top: -60px;
-        }
-
         .button {
             padding: 10px;
-            background: #EEE;
-            display: inline-block;
             user-select: none;
             -webkit-user-select: none; /* Safari, Chrome, iOS Safari */
             -moz-user-select: none;    /* Firefox */
             -ms-user-select: none;     /* Internet Explorer/Edge */
-            border-radius: 50px;
-            border: 4px #333 solid;
-            position: absolute;
             cursor: pointer;
             touch-action: manipulation;
 
             vertical-align: center;
-            width: 10px;
-            height: 10px;
             text-align: center;
             font-size: 50px;
             top: 10px;
-        }
-
-        #move_left {
-            left: 10px;
-            background: url("left.png") 18px 21px no-repeat #EEE;
-        }
-
-        #move_right {
-            right: 10px;
-            background: url("right.png") 23px 21px no-repeat #EEE;
-        }
-
-        #mobile_controls .button.down {
-            background-color: #67bfff;
+            flex: 1;
         }
 
         #refresh {
@@ -122,6 +85,36 @@
             text-decoration: underline;
         }
 
+        #mobile_controls {
+            position: absolute;
+            width: 358px;
+            height: 360px;
+            top: 0;
+            /* pointer-events: none; */
+            user-select: none;
+            -webkit-user-select: none; /* Safari, Chrome, iOS Safari */
+            -moz-user-select: none;    /* Firefox */
+            -ms-user-select: none;     /* Internet Explorer/Edge */
+            display: flex;
+        }
+
+        #mobile_controls .button.down {
+            background-color: #67c0ff3e;
+        }
+        
+        .separator {
+            width: 10px;
+            background-color: #67c0ff3e;
+        }
+    
+        select {
+            font-size: 1rem;
+        }
+
+        .game-container {
+            position: relative;
+            border: 1px black solid;
+        }
     </style>
 
 </head>
@@ -130,28 +123,30 @@
     <div id="container">
         <p id="score">Score: 0</p>
         <p id='gg'>Good game! <a id="refresh" href="#">Play again?</a></p>
-        <canvas width='358' height='360'></canvas>
-        <div id="mobile_controls">
-            <span class="button" id="move_left"></span>
-            <span class="button" id="move_right"></span>
-        </div>
-        <div id="leaderboard_area">
-            <select id="direction_mode">
-                <option value="buttons">buttons</option>
-                <option value="pointer">pointer or finger</option>
-                <option value="gyroscope">gyroscope</option>
-            </select>
-            <p>To play: Use arrow keys or buttons.</p>
+        <!-- <div class="buttons"></div> -->
+        <div class="game-container">
+            <canvas width='358' height='360'></canvas>
+            <div id="mobile_controls">
+                <span class="button" id="move_left"></span>
+                <span class="separator"></span>
+                <span class="button" id="move_right"></span>
+            </div>
+         </div>
+        <div id="leaderboard_area">            
+            <button id="enable-orientation">Enable Orientation</button>
+            <p>
+                Use arrow keys or <select id="direction_mode">
+                    <option value="buttons">buttons</option>
+                    <option value="pointer">pointer</option>
+                    <option value="gyroscope">gyroscope</option>
+                </select>
+            </p>
             <span style="display:none"><a href="#" id="submit_last_score" class="hidden"></a></span>
             <div id="show_high_score_section">
-                <span id="high_score"></span><span style="display:none"><a href="#" id="submit_high_score" class="hidden">Submit to
-                    leaderboard</a></span>
-                </div>
-                <div><a href="/spherical_snake/leaderboard/" target="_blank" id="show_high_score_link">See leaderboard</a></div>
-                <p>See <a href="https://github.com/kevinAlbs/SphericalSnake">source on GitHub</a></p>
+                <p>This is a fork of the <a href="https://github.com/kevinAlbs/SphericalSnake">original Spherical Snake</a> by Kevin Albertson.</p>
+                <p>See <a href="https://github.com/aziaziazi/SphericalSnake">this fork on GitHub</a></p>
             </div>
         </div> <!-- #container -->
-        <script src='leaderboard.js'></script>
         <script>
             // Prevent double-tap-zoom on iOS:
             document.addEventListener("dblclick", (e) => {
